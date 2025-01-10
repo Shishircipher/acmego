@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"io"
 //	"os"
 //	"strconv"
 	"strings"
@@ -119,10 +120,13 @@ func (d *Doer) newRequest(method, uri string, body io.Reader, opts ...RequestOpt
 
 	return req, nil
 }
-func (d *doer) do(req *http.Request, response interface{}) (*http.Response, error) {
+func (d *Doer) do(req *http.Request, response interface{}) (*http.Response, error) {
 	resp, err := d.httpClient.Do(req)
 	if err != nil {
 		return nil, err
+	}
+	if err = checkError(req, resp); err != nil {
+		return resp, err
 	}
 	if response != nil {
 		raw, err := io.ReadAll(resp.Body)
