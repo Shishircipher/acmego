@@ -18,7 +18,8 @@ import (
 	"slices"
 	"strings"
 	"time"
-
+	"os"
+	"log"
 	"golang.org/x/crypto/ocsp"
 )
 
@@ -134,7 +135,24 @@ func GeneratePrivateKey(keyType KeyType) (crypto.PrivateKey, error) {
 
 	return nil, fmt.Errorf("invalid KeyType: %s", keyType)
 }
+func ReadECKey(filename string) *ecdsa.PrivateKey {
+    keyBytes, err := os.ReadFile(filename)
+    if err != nil {
+        log.Fatalf("Failed to read key file: %v", err)
+    }
 
+    block, _ := pem.Decode(keyBytes)
+    if block == nil || block.Type != "EC PRIVATE KEY" {
+        log.Fatalf("Failed to decode PEM block containing EC private key")
+    }
+
+    key, err := x509.ParseECPrivateKey(block.Bytes)
+    if err != nil {
+        log.Fatalf("Failed to parse EC private key: %v", err)
+    }
+
+    return key
+}
 func GenerateCSR(privateKey crypto.PrivateKey, domain string, san []string, mustStaple bool) ([]byte, error) {
 	var dnsNames []string
 	var ipAddresses []net.IP
