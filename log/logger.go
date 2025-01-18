@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"time"
+	"fmt"
 )
 
 var (
@@ -54,4 +55,13 @@ func Info(format string, v ...interface{}) {
 func Debug(format string, v ...interface{}) {
 	log.Printf("DEBUG: "+format, v...)
 }
-
+func Spinner(delay time.Duration) {
+	fmt.Println("Processing ...")
+	for {
+		for _, r := range `-\|/`{
+			fmt.Printf("\r %c", r)
+                        fmt.Printf("%c", r)
+			time.Sleep(delay)
+		}
+	}
+}
