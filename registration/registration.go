@@ -6,6 +6,7 @@ import (
 	"github.com/shishircipher/acmego/certcrypto"
 	"encoding/json"
 	"crypto/ecdsa"
+	"github.com/shishircipher/acmego/log"
 
 )
 func GetUserAccount() ( string, string, *ecdsa.PrivateKey) {
@@ -21,7 +22,7 @@ func GetUserAccount() ( string, string, *ecdsa.PrivateKey) {
         }
         domain := content["domain"]
         email := content["email"]
-        log.Printf("file content - email %s and domain %s \n", email, domain)
+        logger.Info("file content - email %s and domain %s \n", email, domain)
         // Create the private key for new account
 
         privateKey, errprivateKey := os.ReadFile("./.acmego/account/account.key")
