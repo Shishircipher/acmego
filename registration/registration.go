@@ -24,7 +24,10 @@ func GetUserAccount() ( string, string, *ecdsa.PrivateKey) {
         email := content["email"]
         logger.Info("file content - email %s and domain %s \n", email, domain)
         // Create the private key for new account
-
+	erraccountdir := os.MkdirAll("./.acmego/account/", 0700)
+        if erraccountdir != nil {
+                log.Fatalf("Failed to create directory: %v", erraccountdir)
+        }
         privateKey, errprivateKey := os.ReadFile("./.acmego/account/account.key")
 //	log.Printf( "private key is %s",privateKey) //Do not print in production environment
         if errprivateKey != nil {
@@ -37,7 +40,7 @@ func GetUserAccount() ( string, string, *ecdsa.PrivateKey) {
                 if errprivateKeyWrite != nil {
                 log.Fatalf("could not create file %v ", errprivateKeyWrite)
                 }
-                log.Fatalf("privateKey could not read %v ", errprivateKey)
+         //       log.Fatalf("privateKey could not read %v ", errprivateKey)
         }
 	accountprivateKey := certcrypto.ReadECKey("./.acmego/account/account.key")
 	return  email, domain, accountprivateKey
