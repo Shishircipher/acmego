@@ -8,6 +8,7 @@ import (
 	"github.com/shishircipher/acmego/challenges"
 	"github.com/shishircipher/acmego/registration"
 	"github.com/shishircipher/acmego/certificate"
+	"github.com/shishircipher/acmego/config"
 	"github.com/shishircipher/acmego/log"
 )
 
@@ -20,7 +21,24 @@ func main () {
 	ourUserAgent := "xenolf-acme/4.21.0"
 	
 	doer := client.NewDoer(client1, ourUserAgent)
-	nonceUrl := "https://acme-staging-v02.api.letsencrypt.org/acme/new-nonce"
+
+
+	env := "staging"
+	var directoryURL string
+
+	if env == "staging" {
+		directoryURL = "https://acme-staging-v02.api.letsencrypt.org/directory"
+	} else {
+		directoryURL = "https://acme-v02.api.letsencrypt.org/directory"
+	}
+	directory, err := config.FetchDirectory(directoryURL, doer)
+	if err != nil {
+		log.Fatalf("Error fetching ACME directory: %v", err)
+	}
+//	fmt.Printf(" directory url : %v+", directory)
+
+
+	nonceUrl := directory.NewNonce
 	manager := client.NewManager(doer, nonceUrl)
 	nonce, errnounce := manager.Nonce()
 	if errnounce != nil {
@@ -29,7 +47,7 @@ func main () {
 	logger.Info("%v",nonce)
 
 		 // Define ACME create account URL
-        acmeNewAccountUrl := "https://acme-staging-v02.api.letsencrypt.org/acme/new-acct"
+        acmeNewAccountUrl := directory.NewAccount
        	// Create payload for account creation
        	payloadAccount := map[string]interface{}{
                	"termsOfServiceAgreed": true,
@@ -59,7 +77,7 @@ func main () {
         if err != nil {
                 log.Fatalf("Failed to marshal payloadOrder: %v", err)
         }
-	acmeNewOrderUrl := "https://acme-staging-v02.api.letsencrypt.org/acme/new-order"
+	acmeNewOrderUrl := directory.NewOrder
         responseOrder, location1, manager := client.PostPayload(doer, acmeNewOrderUrl, payloadOrderBytes, accountprivateKey, location1 ,manager)
 
         logger.Info("responseOrder: %+v\n", responseOrder)
