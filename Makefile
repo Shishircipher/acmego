@@ -5,7 +5,7 @@ export CGO_ENABLED=0
 LEGO_IMAGE := acmego/letsacme
 MAIN_DIRECTORY := ./main.go
 
-BIN_OUTPUT := $(if $(filter $(shell go env GOOS), windows), dist/lego.exe, dist/lego)
+BIN_OUTPUT := $(if $(filter $(shell go env GOOS), windows), dist/letsacme.exe, dist/letsacme)
 
 TAG_NAME := $(shell git tag -l --contains HEAD)
 SHA := $(shell git rev-parse HEAD)
