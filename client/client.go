@@ -7,13 +7,15 @@ import (
 	"net"
 	"net/http"
 	"io"
-//	"os"
-//	"strconv"
+	"bytes"
+	"crypto"
+	"log"
 	"strings"
 	"time"
 	"runtime"
 	"encoding/json"
 	"github.com/shishircipher/acmego/acme"
+	"github.com/shishircipher/acmego/log"
 )
 const (
 	// ourUserAgent is the User-Agent of this underlying library package.
@@ -175,4 +177,95 @@ func checkError(req *http.Request, resp *http.Response) error {
 		return errorDetails
 	}
 	return nil
+
 }
+//client/client.go:184:84: syntax error: unexpected map after top level declaration
+//client/client.go:191:2: syntax error: unexpected name response, expected {
+//func PostPayload(doer *Doer, url string, payload bytes, manager *Manager) response map[string]interface , manager *Manager {
+//	jwscontent, err := SignContent(acmeURL, payload)
+//	if err != nil {
+//		log.Printf("failed to create jwscontent",err)
+//	}
+//	signedBody := bytes.NewBufferString(jwscontent.FullSerialize())
+//	var response map[string]interface
+//	response, err := doer.Post(url, signedBody, "application/jose+json", response)
+//	if err2 != nil {
+//		log.Printf("failed to send POST request: %s", err2)
+//	}
+//	nonce := GetFromResponse(response)
+//	manager.Push(nonce)
+//	return response, manager
+
+//}
+// PostPayload sends a payload to the specified URL using the provided Doer and Manager.
+func PostPayload(doer *Doer, url string, payload []byte, privateKey crypto.PrivateKey, location string, manager *Manager) (map[string]interface{}, string, *Manager) {
+	// Sign the content
+	jws := NewJWS(privateKey, location, manager)
+	jwscontent, err := jws.SignContent(url, payload)
+	if err != nil {
+		log.Printf("failed to create JWS content: %s", err)
+	}
+
+	// Prepare the signed body for the POST request
+	signedBody := bytes.NewBufferString(jwscontent.FullSerialize())
+	var post interface {}
+	// Make the POST request
+	response, err := doer.Post(url, signedBody, "application/jose+json", post)
+	if err != nil {
+		log.Printf("failed to send POST request: %s", err)
+//		return nil, manager
+	}
+	// Handle the response
+        if response.StatusCode != http.StatusCreated {
+                log.Printf(" status code: %d", response.StatusCode)
+        }
+
+	// Extract nonce from the response and push it to the Manager
+	nonce, errN := GetFromResponse(response)
+	if errN != nil {
+                log.Printf("failed to get nounce: %s", errN)
+        }
+	manager.Push(nonce)
+	// Read the body content
+	bodyBytes, err := io.ReadAll(response.Body)
+	if err != nil {
+             log.Printf("failed to bodybytes: %s", err)
+	}
+	location = response.Header.Get("Location")
+	for key, values := range response.Header {
+		for _, value := range values {
+			logger.Info("  %s: %s\n", key, value)
+		}
+	}
+	// Declare a variable to store the response
+        var responseData map[string]interface{}
+
+        if err := json.Unmarshal(bodyBytes, &responseData); err != nil {
+	        log.Printf("failednd orderrequest: %s", err)
+        }
+	// Return the response and the updated Manager
+	return responseData, location, manager
+}
+
+func (d *Doer) GetResponse(url string) (*http.Response, error) {
+    // Create a new HTTP request
+    req, err := d.newRequest(http.MethodGet, url, nil)
+    if err != nil {
+        return nil, err
+    }
+
+    // Perform the HTTP request
+    resp, err := d.httpClient.Do(req)
+    if err != nil {
+        return nil, err
+    }
+
+    // Check for HTTP or API-specific errors
+    if err = checkError(req, resp); err != nil {
+        return resp, err
+    }
+
+    // Return the response
+    return resp, nil
+}
+
