@@ -55,7 +55,24 @@ func Info(format string, v ...interface{}) {
 func Debug(format string, v ...interface{}) {
 	log.Printf("DEBUG: "+format, v...)
 }
-func Spinner(delay time.Duration) {
+func Spinner(seconds int) {
+	fmt.Print("Processing ... ")
+	timeout := time.After(time.Duration(seconds) * time.Second) // Timer for the given duration
+	for {
+		select {
+		case <-timeout: // Exit the spinner after the timeout
+			fmt.Println("\nDone")
+			return
+		default:
+			// Spinner animation
+			for _, r := range `-\|/` {
+				fmt.Printf("\rProcessing ... %c", r)
+				time.Sleep(100 * time.Millisecond) // Adjust the delay as needed
+			}
+		}
+	}
+}
+func Spinner1(delay time.Duration) {
 	fmt.Println("Processing ...")
 	for {
 		for _, r := range `-\|/`{
