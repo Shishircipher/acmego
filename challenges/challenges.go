@@ -13,17 +13,20 @@ import (
 	"github.com/shishircipher/acmego/log"
 )
 
-func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKey crypto.PrivateKey, location string, manager *client.Manager ) (*client.Manager ) {
+func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKey crypto.PrivateKey, location string, manager *client.Manager)  (*client.Manager, string, error ) {
 	jws := client.NewJWS(privateKey,location , manager)
 	var challenge interface {}
         response1, err := doer.Get(authURL, challenge)
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to get response of authURL : %w", err)
+	}
 	logger.Info(" %v ",response1.Header)
 	if response1.StatusCode != http.StatusCreated {
                 logger.Info("status code: %v", response1.StatusCode)
         }
         bodyBytes, err := io.ReadAll(response1.Body)
         if err != nil {
-             log.Fatalf("failed to bodybytes: %v", err)
+             return nil, "", fmt.Errorf("failed to bodybytes: %w", err)
         }
         // Log the raw body (optional, useful for debugging)
         logger.Info("Raw Body: %s", string(bodyBytes))
@@ -31,7 +34,7 @@ func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKe
 	var response map[string]interface{}
 	err = json.Unmarshal(bodyBytes, &response)
 	if err != nil {
-		log.Fatalf("Failed to parse JSON: %v", err)
+		return nil, "", fmt.Errorf("Failed to parse JSON: %w", err)
 	}
 	var challurl string
 	// Extract the token value
@@ -48,14 +51,13 @@ func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKe
 		}
 	}
 
-	dnstxt, err := jws.GetKeyAuthorization(tokendns)
+	token, err := jws.GetKeyAuthorization(tokendns)
 	if err != nil {
-             log.Fatalf("failed to dnstxts: %v", err)
+             return nil, "", fmt.Errorf("failed to create tokentxts: %w", err)
         }
-	//log.Println(dnstxt)
         // Define the DNS record details
-	dnstxt1 := getTXTValue(dnstxt)
-	log.Println(challurl)
+	dnsTxt := getTXTValue(token)
+//	log.Println(challurl)
 	// Define ANSI color codes
     	red := "\033[31m"
     //	green := "\033[32m"
@@ -66,15 +68,18 @@ func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKe
 	log.Printf("domain name : %v \n",domain)
 	fmt.Printf(" Paste the red text  in domain management portal (time limit is 5 minutes) :- \n")
 //	fmt.Printf(red + "%s" + reset, dnstxt1)
-	fmt.Printf("%s%s%s", red, dnstxt1, reset)
+	fmt.Printf("%s%s%s", red, dnsTxt, reset)
 	fmt.Println()
 	fmt.Println("wait for 300 seconds")
 	logger.Spinner(300)
 	payloadEmptyBytes := []byte("{}")
-	responseChallenge, location, manager := client.PostPayload(doer, challurl, payloadEmptyBytes, privateKey, location ,manager)
+	responseChallenge, location, manager, err := client.PostPayload(doer, challurl, payloadEmptyBytes, privateKey, location ,manager)
+	if err != nil {
+             return nil, "", fmt.Errorf("failed to get reponse challenge: %w", err)
+        }
 	logger.Info(" %v ",location)
 	logger.Info("responseChallenge: %+v\n", responseChallenge)
-	return manager
+	return manager, dnsTxt, nil
 }
 
 
