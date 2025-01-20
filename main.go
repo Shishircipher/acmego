@@ -14,7 +14,10 @@ import (
 
 func main () {
 	fmt.Println("Welcome to acmego")
-        email, domain, accountprivateKey := registration.GetUserAccount()
+        email, domain, accountprivateKey, err := registration.GetUserAccount()
+	if err != nil {
+		logger.Fatalf("could not get user account %v ", err)
+	}
 	fmt.Printf("file content - email %s and domain %s \n", email, domain)
 	
 	client1 := client.CreateDefaultHTTPClient()
@@ -33,16 +36,16 @@ func main () {
 	}
 	directory, err := config.FetchDirectory(directoryURL, doer)
 	if err != nil {
-		log.Fatalf("Error fetching ACME directory: %v", err)
+		logger.Fatalf("Error fetching ACME directory: %v", err)
 	}
 //	fmt.Printf(" directory url : %v+", directory)
 
 
 	nonceUrl := directory.NewNonce
 	manager := client.NewManager(doer, nonceUrl)
-	nonce, errnounce := manager.Nonce()
-	if errnounce != nil {
-		log.Fatalf("no nounce %v", errnounce)
+	nonce, err := manager.Nonce()
+	if err != nil {
+		logger.Fatalf("no nounce %v", err)
 	}
 	logger.Info("%v",nonce)
 
@@ -57,11 +60,14 @@ func main () {
         	// Marshal payload
         payloadAccountBytes, err := json.Marshal(payloadAccount)
        	if err != nil {
-                	log.Fatalf("Failed to marshal payload: %v", err)
+                	logger.Fatalf("Failed to marshal payload: %v", err)
         }
         	//log.Printf(" %v ",payloadAccountBytes)
 	location := ""
-	resp, location1, manager := client.PostPayload(doer, acmeNewAccountUrl, payloadAccountBytes, accountprivateKey, location ,manager)
+	resp, location1, manager, err := client.PostPayload(doer, acmeNewAccountUrl, payloadAccountBytes, accountprivateKey, location ,manager)
+	if err != nil {
+		logger.Fatalf("failed to create account %v", err)
+	}
 	logger.Info("Manager: %+v\n", resp)
 	logger.Info("Manager: %+v\n", &manager)
 	logger.Info("%s", location1)
@@ -75,11 +81,13 @@ func main () {
 	}
 	payloadOrderBytes, err := json.Marshal(payloadOrder)
         if err != nil {
-                log.Fatalf("Failed to marshal payloadOrder: %v", err)
+                logger.Fatalf("Failed to marshal payloadOrder: %v", err)
         }
 	acmeNewOrderUrl := directory.NewOrder
-        responseOrder, location1, manager := client.PostPayload(doer, acmeNewOrderUrl, payloadOrderBytes, accountprivateKey, location1 ,manager)
-
+        responseOrder, location1, manager , err := client.PostPayload(doer, acmeNewOrderUrl, payloadOrderBytes, accountprivateKey, location1 ,manager)
+	if err != nil {
+		logger.Fatalf("failed to create new order %v", err)
+	}
         logger.Info("responseOrder: %+v\n", responseOrder)
         logger.Info("Manager: %+v\n", &manager)
         logger.Info("%s", location1)
@@ -94,8 +102,16 @@ func main () {
 	} else {
     	log.Fatalf("authURLs is not of type []interface{}")
 	}
-	manager = challenges.DNS01Challenges(domain, authURL, doer, accountprivateKey, accountLocation, manager)
-	
+	manager, dnsTxt, err := challenges.DNS01Challenges(domain, authURL, doer, accountprivateKey, accountLocation, manager)
+	if err != nil {
+		logger.Fatalf(" failed to dns challenge %v , Please retry", err)
+	}
+	logger.Info("dns txt : %v ", dnsTxt)
+
+	// You can add your api here using dnsTxt.
+
+
+
 	logger.Info("Manager: %+v\n", &manager)
 //	time.Sleep(300 * time.Second)
         
@@ -105,5 +121,6 @@ func main () {
 	if err := certificate.CSRRequest(finalizeStr, doer, accountLocation, domain ,accountprivateKey,  manager); err != nil {
 		fmt.Printf("failed to create certficate %v", err)
 	}	
+	fmt.Println(" Done ")
 
 }
