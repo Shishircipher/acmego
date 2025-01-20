@@ -9,6 +9,7 @@ import (
 
 var (
 	logFile *os.File
+	fileLogger  *log.Logger // For logging all messages to the log file
 )
 
 func init() {
@@ -18,6 +19,7 @@ func init() {
 	err = os.MkdirAll("./.acmego/log", 0700)
 	if err != nil {
 		log.Fatalf("failed to create log directory: %v", err)
+		os.Exit(1)
 	}
 
 	// Generate a timestamp for the log file name
@@ -28,11 +30,19 @@ func init() {
 	logFile, err = os.OpenFile(logFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		log.Fatalf("failed to open log file: %v", err)
+		os.Exit(1)
 	}
 
 	// Set the log output to the file
 	log.SetOutput(logFile)
+	fileLogger = log.New(logFile, "", log.Ldate|log.Ltime|log.Lshortfile)
 	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+}
+
+func Fatalf(format string, args ...interface{}) {
+        fmt.Printf(format, args...)
+        fileLogger.Fatalf(format, args...)
+
 }
 
 // Fatal logs a critical error message and exits the program
