@@ -18,7 +18,7 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
 
 	privateKeyDomain, err:= certcrypto.GeneratePrivateKey("2048")
         if err != nil {
-                  log.Fatalf(" could not create privateKeyDomain %v ",err)
+                  return fmt.Errorf(" could not create privateKeyDomain %w ",err)
         }
         // Construct the file path dynamically using the domain name
         filePath := "./.acmego/" + domain + "/privateKey.key"
@@ -26,13 +26,13 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
         // Ensure the directory exists
         errdomaindir := os.MkdirAll("./.acmego/"+domain, 0700)
         if errdomaindir != nil {
-                log.Fatalf("Failed to create directory: %v", errdomaindir)
+                return fmt.Errorf("Failed to create directory: %w", errdomaindir)
         }
         privateKeyDomainPEM := certcrypto.PEMEncode(privateKeyDomain)
         // Write the private key to the file
         errprivateKeyDomainWrite := os.WriteFile(filePath, privateKeyDomainPEM, 0600)
         if errprivateKeyDomainWrite != nil {
-                log.Fatalf("Failed to write private key to file: %v", errprivateKeyDomainWrite)
+                return fmt.Errorf("Failed to write private key to file: %w", errprivateKeyDomainWrite)
         }
 
         logger.Info("Private key written successfully to %v", filePath)
@@ -41,7 +41,7 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
         // Generate the DER certificate
         csrbytes, err := certcrypto.GenerateCSR(privateKeyDomain,  domain, san, mustStaple)
         if err != nil {
-                log.Fatalf("Failed to generate DER certificate: %v\n", err)
+                return fmt.Errorf("Failed to generate DER certificate: %w\n", err)
         }
 
 
@@ -52,10 +52,12 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
         }
         payloadCSRBytes, err := json.Marshal(csrPem)
         if err != nil {
-                log.Fatalf("Failed to marshal payload: %v", err)
+                return fmt.Errorf("Failed to marshal payload: %w", err)
         }
-        responseCSR, location1, manager := client.PostPayload(doer, url, payloadCSRBytes, privateKey, location ,manager)
-
+        responseCSR, location1, manager, err := client.PostPayload(doer, url, payloadCSRBytes, privateKey, location ,manager)
+	if err != nil {
+                return fmt.Errorf("Failed to marshal payload of CSR: %w", err)
+        }
         logger.Info("ResponseCSR: %+v\n", responseCSR)
         logger.Info("Manager: %+v\n", &manager)
 	logger.Spinner(60)
@@ -64,16 +66,16 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
 // Perform the GET request
         response1, err := doer.Get(location1, finalOrder)
         if err != nil {
-                log.Fatalf("HTTP GET request failed: %v", err)
+                return fmt.Errorf("HTTP GET request failed: %w", err)
         }
 	
 	//log.Println(response1.Header)
         if response1.StatusCode != http.StatusCreated {
-                log.Printf("status code: %d", response1.StatusCode)
+                logger.Info("status code: %v", response1.StatusCode)
         }
         bodyBytes, err := io.ReadAll(response1.Body)
         if err != nil {
-             log.Printf("failed to bodybytes: %s", err)
+             return fmt.Errorf("failed to bodybytes: %w", err)
         }
         // Log the raw body (optional, useful for debugging)
         logger.Info("Raw Body: %v", string(bodyBytes))
@@ -81,7 +83,7 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
         var response map[string]interface{}
         err = json.Unmarshal(bodyBytes, &response)
         if err != nil {
-                log.Fatalf("Failed to parse JSON: %v", err)
+                return fmt.Errorf("Failed to parse JSON: %w", err)
         }
 // Extract the `certificate` field from the parsed response
         certificateUrl, ok := response["certificate"].(string)
@@ -89,14 +91,14 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
                 log.Println("Certificate field is missing or not a string")
 		fmt.Println("dns-01 challenge failed")
         } else {
-         log.Printf("Certificate URL: %s", certificateUrl)
+         logger.Info("Certificate URL: %v", certificateUrl)
         }
 
 
 
 	// Download the certificate if the URL is valid
         if err := downloadCertificate(certificateUrl, domain, doer); err != nil {
-        log.Printf("Failed to download certificate: %v", err)
+        logger.Info("Failed to download certificate: %v", err)
         }
 	return nil
 }
