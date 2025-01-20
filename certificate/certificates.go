@@ -122,6 +122,6 @@ func downloadCertificate(url string, domain string, doer *client.Doer) error {
         return fmt.Errorf("failed to create certificate file: %w", err)
     }
 
-    fmt.Println("Certificate downloaded successfully as 'certificate.pem'")
+    fmt.Printf("Certificate downloaded successfully as 'certificate.pem' %s", certFilePath)
     return nil
 }
