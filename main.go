@@ -26,7 +26,7 @@ func main () {
 	doer := client.NewDoer(client1, ourUserAgent)
 
 
-	env := "staging"
+	env := "production"
 	var directoryURL string
 
 	if env == "staging" {
