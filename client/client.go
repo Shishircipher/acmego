@@ -9,7 +9,7 @@ import (
 	"io"
 	"bytes"
 	"crypto"
-	"log"
+//	"log"
 	"strings"
 	"time"
 	"runtime"
@@ -198,38 +198,37 @@ func checkError(req *http.Request, resp *http.Response) error {
 
 //}
 // PostPayload sends a payload to the specified URL using the provided Doer and Manager.
-func PostPayload(doer *Doer, url string, payload []byte, privateKey crypto.PrivateKey, location string, manager *Manager) (map[string]interface{}, string, *Manager) {
+func PostPayload(doer *Doer, url string, payload []byte, privateKey crypto.PrivateKey, location string, manager *Manager) (map[string]interface{}, string, *Manager, error) {
 	// Sign the content
 	jws := NewJWS(privateKey, location, manager)
-	jwscontent, err := jws.SignContent(url, payload)
+	jwsContent, err := jws.SignContent(url, payload)
 	if err != nil {
-		log.Printf("failed to create JWS content: %s", err)
+		return nil, "", nil, fmt.Errorf("failed to create JWS content: %v", err)
 	}
 
 	// Prepare the signed body for the POST request
-	signedBody := bytes.NewBufferString(jwscontent.FullSerialize())
+	signedBody := bytes.NewBufferString(jwsContent.FullSerialize())
 	var post interface {}
 	// Make the POST request
 	response, err := doer.Post(url, signedBody, "application/jose+json", post)
 	if err != nil {
-		log.Printf("failed to send POST request: %s", err)
-//		return nil, manager
+		return nil, "", nil, fmt.Errorf("failed to send POST request: %v", err)
 	}
 	// Handle the response
         if response.StatusCode != http.StatusCreated {
-                log.Printf(" status code: %d", response.StatusCode)
+                logger.Info(" status code: %v", response.StatusCode)
         }
 
 	// Extract nonce from the response and push it to the Manager
-	nonce, errN := GetFromResponse(response)
-	if errN != nil {
-                log.Printf("failed to get nounce: %s", errN)
+	nonce, err := GetFromResponse(response)
+	if err != nil {
+                return nil, "", nil, fmt.Errorf("failed to get nounce: %v", err)
         }
 	manager.Push(nonce)
 	// Read the body content
 	bodyBytes, err := io.ReadAll(response.Body)
 	if err != nil {
-             log.Printf("failed to bodybytes: %s", err)
+            return nil, "", nil, fmt.Errorf("failed to bodybytes: %v", err)
 	}
 	location = response.Header.Get("Location")
 	for key, values := range response.Header {
@@ -241,10 +240,10 @@ func PostPayload(doer *Doer, url string, payload []byte, privateKey crypto.Priva
         var responseData map[string]interface{}
 
         if err := json.Unmarshal(bodyBytes, &responseData); err != nil {
-	        log.Printf("failednd orderrequest: %s", err)
+	        return nil, "", nil, fmt.Errorf("failednd orderrequest: %s", err)
         }
 	// Return the response and the updated Manager
-	return responseData, location, manager
+	return responseData, location, manager, nil
 }
 
 func (d *Doer) GetResponse(url string) (*http.Response, error) {
