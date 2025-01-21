@@ -1,5 +1,5 @@
 # ACMEgo [![ACMEgo Badge](https://acmegobadge.shishir.dev:8445/badge.svg)](https://acmegobadge.shishir.dev:8445/badge.svg)  
-**A Lightweight ACME Client Written in Go**
+**A Lightweight ACME Client Written in Go for getting **`TLS`** certificates. from the Let's Encrypt CA **
 
 ACMEgo is a fully compliant [RFC 8555](https://tools.ietf.org/html/rfc8555) (ACME) implementation written in pure Go. It is lightweight and uses Go’s standard library for simplicity and performance.
 
