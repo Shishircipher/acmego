@@ -66,7 +66,9 @@ func DNS01Challenges(domain string, authURL string, doer *client.Doer, privateKe
 	reset := "\033[0m" // Reset to default color
 	
 	log.Printf("domain name : %v \n",domain)
-	fmt.Printf(" Paste the red text  in domain management portal (time limit is 5 minutes) :- \n")
+//	fmt.Printf(" Copy the red text  in value of TXT Record of host : _acme-challenge.%s in manage DNS Records of your domain management portal of DNS Providers (time limit is 5 minutes) :- \n", domain)
+	fmt.Printf("Please copy the red text below and paste it as the value of the TXT record for the host '_acme-challenge.%s' in your DNS management portal. You have 5 minutes to complete this action:\n", domain)
+
 //	fmt.Printf(red + "%s" + reset, dnstxt1)
 	fmt.Printf("%s%s%s", red, dnsTxt, reset)
 	fmt.Println()
