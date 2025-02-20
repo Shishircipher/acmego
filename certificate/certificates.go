@@ -37,7 +37,7 @@ func CSRRequest(url string, doer *client.Doer, location string, domain string, p
 
         logger.Info("Private key written successfully to %v", filePath)
 	san := []string{domain}
-        mustStaple := true
+        mustStaple := false
         // Generate the DER certificate
         csrbytes, err := certcrypto.GenerateCSR(privateKeyDomain,  domain, san, mustStaple)
         if err != nil {
